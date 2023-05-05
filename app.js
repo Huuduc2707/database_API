@@ -11,7 +11,6 @@ app.post("/login", (req, res)=>{
     conn.execute("SELECT * FROM users WHERE email = ?", [email], (err, results)=>{
         if(err) res.status(500).send(err);
         else{
-            console.log(results);
             if(!results.length){
                 conn.execute("INSERT INTO users (email) VALUES (?)", [email], (err)=>{
                     if(err) res.status(500).send(err);
@@ -19,14 +18,21 @@ app.post("/login", (req, res)=>{
             }
         }
     })
-    //utils.generateToken(res, email);
+    utils.generateToken(res, email);
 });
 
 
 //Read specific setting
 app.get("/get/setting", utils.authenticateToken, (req, res)=>{
-    const {deviceID} = req.body;
-    conn.execute("SELECT setting.id AS settingId, dateCreate, record, status, onTime, offTime, deviceId, type, userId FROM setting JOIN devices ON deviceId = devices.id WHERE deviceId = ? ORDER BY dateCreate", [deviceID],(err, results)=>{
+    const {deviceID, email} = req.body;
+    let sql = "SELECT setting.id AS settingId, dateCreate, record, status, onTime, offTime, deviceId, type, userId FROM setting JOIN devices ON deviceId = devices.id JOIN users ON userId = users.id WHERE users.email = ? ";
+    let param = [email];
+    if(deviceID){
+        sql += "AND deviceId = ?";
+        param.push(deviceID);
+    }
+    sql += " ORDER BY dateCreate";
+    conn.execute(sql, param, (err, results)=>{
         if(err) res.status(500).send(err);
         else{
             if(results.length) res.status(200).json(results);
@@ -37,7 +43,7 @@ app.get("/get/setting", utils.authenticateToken, (req, res)=>{
 
 //Read all setting
 app.get("/get/allSetting", utils.authenticateToken, (req, res)=>{
-    conn.execute("SELECT setting.id AS settingId, dateCreate, record, status, onTime, offTime, deviceId, type, userId FROM setting JOIN devices ON deviceId = devices.id GROUP BY deviceId ORDER BY dateCreate", (err, results)=>{
+    conn.execute("SELECT setting.id AS settingId, dateCreate, record, status, onTime, offTime, deviceId, type, userId FROM setting JOIN devices ON deviceId = devices.id ORDER BY dateCreate", (err, results)=>{
         if(err) res.status(500).send(err);
         else{
             if(results.length) res.status(200).json(results);
@@ -77,8 +83,15 @@ app.post("/write/setting", utils.authenticateToken, (req, res)=>{
 
 //Read specific data
 app.get("/get/data", utils.authenticateToken, (req, res)=>{
-    const {deviceID} = req.body;
-    conn.execute("SELECT data.id AS recordId, dateCreate, record, deviceId, type, userId FROM data JOIN devices ON deviceId = devices.id WHERE deviceId = ? ORDER BY dateCreate", [deviceID], (err, results)=>{
+    const {deviceID, email} = req.body;
+    let sql = "SELECT data.id AS recordId, dateCreate, record, deviceId, type, userId FROM data JOIN devices ON deviceId = devices.id JOIN users ON users.id = userId WHERE users.email = ? ";
+    let param = [email];
+    if(deviceID){
+        sql += "AND deviceId = ?";
+        param.push(deviceID);
+    }
+    sql += " ORDER BY dateCreate";
+    conn.execute(sql, param, (err, results)=>{
         if(err) res.status(500).send(err);
         else{
             if(results.length) res.status(200).json(results);
@@ -89,7 +102,7 @@ app.get("/get/data", utils.authenticateToken, (req, res)=>{
 
 //Read all data
 app.get("/get/allData", utils.authenticateToken, (req, res)=>{
-    conn.execute("SELECT data.id AS recordId, dateCreate, record, deviceId, type, userId FROM data JOIN devices ON deviceId = devices.id GROUP BY deviceId ORDER BY dateCreate", (err, results)=>{
+    conn.execute("SELECT data.id AS recordId, dateCreate, record, deviceId, type, userId FROM data JOIN devices ON deviceId = devices.id ORDER BY dateCreate", (err, results)=>{
         if(err) res.status(500).send(err);
         else{
             if(results.length) res.status(200).json(results);
@@ -118,9 +131,9 @@ app.post("/write/report", utils.authenticateToken, (req, res)=>{
 
 //Read devices info
 app.get("/get/device", utils.authenticateToken, (req, res)=>{
-    const{deviceID, userID} = req.body;
-    let sql = "SELECT * FROM devices JOIN users ON userId = users.id WHERE userId = ? ";
-    let param = [userID];
+    const{deviceID, email} = req.body;
+    let sql = "SELECT devices.id, type, userId, users.email FROM devices JOIN users ON userId = users.id WHERE users.email = ? ";
+    let param = [email];
     if(deviceID){
         sql += "AND deviceId = ?";
         param.push(deviceID);
