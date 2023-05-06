@@ -78,28 +78,28 @@ app.post("/write/setting", utils.authenticateToken, (req, res)=>{
                 sql += ` WHERE deviceId = ?`;
                 param.push(deviceID);
             }
-            else{
-                sql = "INSERT INTO setting (dateCreate";
-                let values = "?";
-                param = [dateCreate];
-                if(record){
-                    sql += ", record";
-                    values += ", ?";
-                    param.push(record);
-                }
-                if(status){
-                    sql += ", status";
-                    values += ", ?";
-                    param.push(status);
-                }
-                if(onTime){
-                    sql += ", onTime, offTime";
-                    values += ", ?, ?";
-                    param.push(onTime, offTime);
-                }
-                sql += `, deviceId) VALUES (${values}, ?)`;
-                param.push(deviceID);
-            }
+            // else{
+            //     sql = "INSERT INTO setting (dateCreate";
+            //     let values = "?";
+            //     param = [dateCreate];
+            //     if(record){
+            //         sql += ", record";
+            //         values += ", ?";
+            //         param.push(record);
+            //     }
+            //     if(status){
+            //         sql += ", status";
+            //         values += ", ?";
+            //         param.push(status);
+            //     }
+            //     if(onTime){
+            //         sql += ", onTime, offTime";
+            //         values += ", ?, ?";
+            //         param.push(onTime, offTime);
+            //     }
+            //     sql += `, deviceId) VALUES (${values}, ?)`;
+            //     param.push(deviceID);
+            // }
         }
         conn.execute(sql, param, (err)=>{
             if(err) res.status(500).send(err);
@@ -179,7 +179,17 @@ app.post("/write/device", utils.authenticateToken, (req, res)=>{
     const {type, userID} = req.body;
     conn.execute("INSERT INTO devices (type, userId) VALUES (?, ?)", [type, userID], (err)=>{
         if(err) res.status(500).send(err);
-        else res.status(200).json({"res": "success"});
+        else{
+            conn.execute("SELECT MAX(id) as id FROM devices", (err, results)=>{
+                if(err) res.status(500).send(err);
+                else{
+                    conn.execute("INSERT INTO setting (record, deviceId) VALUES (0, ?)", [results[0]['id']], (err)=>{
+                        if(err) res.status(500).send(err);
+                    });
+                }
+            });
+            res.status(200).json({"res": "success"});
+        }
     })
 });
 
