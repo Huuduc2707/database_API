@@ -23,7 +23,7 @@ app.post("/login", (req, res)=>{
 
 
 //Read specific setting
-app.get("/get/setting", utils.authenticateToken, (req, res)=>{
+app.post("/get/setting", utils.authenticateToken, (req, res)=>{
     const {deviceID, email} = req.body;
     let sql = "SELECT setting.id AS settingId, dateCreate, record, status, onTime, offTime, deviceId, type, userId FROM setting JOIN devices ON deviceId = devices.id JOIN users ON userId = users.id WHERE users.email = ? ";
     let param = [email];
@@ -42,7 +42,7 @@ app.get("/get/setting", utils.authenticateToken, (req, res)=>{
 });
 
 //Read all setting
-app.get("/get/allSetting", utils.authenticateToken, (req, res)=>{
+app.post("/get/allSetting", utils.authenticateToken, (req, res)=>{
     conn.execute("SELECT setting.id AS settingId, dateCreate, record, status, onTime, offTime, deviceId, type, userId FROM setting JOIN devices ON deviceId = devices.id ORDER BY dateCreate", (err, results)=>{
         if(err) res.status(500).send(err);
         else{
@@ -55,34 +55,61 @@ app.get("/get/allSetting", utils.authenticateToken, (req, res)=>{
 //Write setting
 app.post("/write/setting", utils.authenticateToken, (req, res)=>{
     const {dateCreate, record, status, onTime, offTime, deviceID} = req.body;
-    let sql = "INSERT INTO setting (dateCreate";
-    let values = "?";
-    let param = [dateCreate];
-    if(record){
-        sql += ", record";
-        values += ", ?";
-        param.push(record);
-    }
-    if(status){
-        sql += ", status";
-        values += ", ?";
-        param.push(status);
-    }
-    if(onTime){
-        sql += ", onTime, offTime";
-        values += ", ?, ?";
-        param.push(onTime, offTime);
-    }
-    sql += `, deviceId) VALUES (${values}, ?)`;
-    param.push(deviceID);
-    conn.execute(sql, param, (err)=>{
+    let sql;
+    let param;
+    conn.execute("SELECT * FROM setting WHERE deviceId = ?", [deviceID], (err, results)=>{
         if(err) res.status(500).send(err);
-        else res.status(200).json({"res": "success"});
-    })
+        else{
+            if(results.length){
+                sql = "UPDATE setting SET dateCreate = ?";
+                param = [dateCreate];
+                if(record){
+                    sql += ", record = ?";
+                    param.push(record);
+                }
+                if(status){
+                    sql += ", status = ?";
+                    param.push(status);
+                }
+                if(onTime){
+                    sql += ", onTime = ?, offTime = ?";
+                    param.push(onTime, offTime);
+                }
+                sql += ` WHERE deviceId = ?`;
+                param.push(deviceID);
+            }
+            else{
+                sql = "INSERT INTO setting (dateCreate";
+                let values = "?";
+                param = [dateCreate];
+                if(record){
+                    sql += ", record";
+                    values += ", ?";
+                    param.push(record);
+                }
+                if(status){
+                    sql += ", status";
+                    values += ", ?";
+                    param.push(status);
+                }
+                if(onTime){
+                    sql += ", onTime, offTime";
+                    values += ", ?, ?";
+                    param.push(onTime, offTime);
+                }
+                sql += `, deviceId) VALUES (${values}, ?)`;
+                param.push(deviceID);
+            }
+        }
+        conn.execute(sql, param, (err)=>{
+            if(err) res.status(500).send(err);
+            else res.status(200).json({"res": "success"});
+        });
+    });
 });
 
 //Read specific data
-app.get("/get/data", utils.authenticateToken, (req, res)=>{
+app.post("/get/data", utils.authenticateToken, (req, res)=>{
     const {deviceID, email} = req.body;
     let sql = "SELECT data.id AS recordId, dateCreate, record, deviceId, type, userId FROM data JOIN devices ON deviceId = devices.id JOIN users ON users.id = userId WHERE users.email = ? ";
     let param = [email];
@@ -101,7 +128,7 @@ app.get("/get/data", utils.authenticateToken, (req, res)=>{
 });
 
 //Read all data
-app.get("/get/allData", utils.authenticateToken, (req, res)=>{
+app.post("/get/allData", utils.authenticateToken, (req, res)=>{
     conn.execute("SELECT data.id AS recordId, dateCreate, record, deviceId, type, userId FROM data JOIN devices ON deviceId = devices.id ORDER BY dateCreate", (err, results)=>{
         if(err) res.status(500).send(err);
         else{
@@ -130,7 +157,7 @@ app.post("/write/report", utils.authenticateToken, (req, res)=>{
 });
 
 //Read devices info
-app.get("/get/device", utils.authenticateToken, (req, res)=>{
+app.post("/get/device", utils.authenticateToken, (req, res)=>{
     const{deviceID, email} = req.body;
     let sql = "SELECT devices.id, type, userId, users.email FROM devices JOIN users ON userId = users.id WHERE users.email = ? ";
     let param = [email];
