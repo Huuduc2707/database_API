@@ -3,6 +3,8 @@ const conn = require('./config/db');
 const utils = require('./utils/utils');
 const express = require('express');
 const app = express();
+const cors = require('cors');
+app.use(cors());
 app.use(express.json())
 
 //Log in
@@ -78,28 +80,6 @@ app.post("/write/setting", utils.authenticateToken, (req, res)=>{
                 sql += ` WHERE deviceId = ?`;
                 param.push(deviceID);
             }
-            // else{
-            //     sql = "INSERT INTO setting (dateCreate";
-            //     let values = "?";
-            //     param = [dateCreate];
-            //     if(record){
-            //         sql += ", record";
-            //         values += ", ?";
-            //         param.push(record);
-            //     }
-            //     if(status){
-            //         sql += ", status";
-            //         values += ", ?";
-            //         param.push(status);
-            //     }
-            //     if(onTime){
-            //         sql += ", onTime, offTime";
-            //         values += ", ?, ?";
-            //         param.push(onTime, offTime);
-            //     }
-            //     sql += `, deviceId) VALUES (${values}, ?)`;
-            //     param.push(deviceID);
-            // }
         }
         conn.execute(sql, param, (err)=>{
             if(err) res.status(500).send(err);
